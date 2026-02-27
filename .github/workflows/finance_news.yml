@@ -1,0 +1,32 @@
+name: Finance News Bot
+
+on:
+  schedule:
+    - cron: "1 * * * *"  # 每小时的第 1 分钟运行（UTC 时间）
+  workflow_dispatch:       # 允许手动触发，方便测试
+
+jobs:
+  run-finance-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run finance news script
+        env:
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+          QQ_EMAIL_AUTH_CODE: ${{ secrets.QQ_EMAIL_AUTH_CODE }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: |
+          python finance_news.py
