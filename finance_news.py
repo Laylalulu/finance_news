@@ -5,8 +5,10 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
-from dotenv import load_dotenv  # 本地调试时，从 .env 读取
-load_dotenv()
+GLM_API_KEY = os.environ.get("GLM_API_KEY")
+EMAIL_PASSWORD = os.environ.get("QQ_EMAIL_AUTH_CODE")
+EMAIL_FROM = os.environ.get("EMAIL_FROM")
+EMAIL_TO = os.environ.get("EMAIL_TO")
 
 # ================== 基本配置 ==================
 
