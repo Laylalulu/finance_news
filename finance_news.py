@@ -5,7 +5,7 @@ import os
 import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
-from dotenv import load_dotenv # 读取 .env 文件
+from dotenv import load_dotenv  # 本地调试时，从 .env 读取
 load_dotenv()
 
 # ================== 基本配置 ==================
@@ -16,20 +16,23 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# PythonAnywhere 上的工作目录（按你自己的用户名改）
-SAVE_PATH = "/home/laylalulu/python_scripts/"
+# 在 GitHub Actions 中保存日志的目录（相对当前工作目录）
+SAVE_PATH = "./logs/"
 
-# 智谱 GLM 配置（推荐从环境变量中读取）
-GLM_API_KEY = os.environ.get("GLM_API_KEY")  # 在 PythonAnywhere 的 Environment variables 里配置
+# 智谱 GLM 配置（推荐从环境变量/Secrets 中读取）
+# - 本地：可以放在 .env 里
+# - GitHub Actions：放在仓库 Settings -> Secrets -> Actions
+GLM_API_KEY = os.environ.get("GLM_API_KEY")
 GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-GLM_MODEL = "glm-4-flash"  # 可按你账号权限更换成别的模型
+GLM_MODEL = "glm-4-flash"
 
 # 邮件配置（QQ 邮箱）
 SMTP_SERVER = "smtp.qq.com"
 SMTP_PORT = 465
-EMAIL_FROM = "439472808@qq.com"        # 发件人邮箱（QQ 邮箱）
-EMAIL_TO = "439472808@qq.com"          # 收件人邮箱，可以和发件人一样
-EMAIL_PASSWORD = os.environ.get("QQ_EMAIL_AUTH_CODE")  # QQ 邮箱授权码（不是登录密码）
+EMAIL_FROM = "439472808@qq.com"   # 发件人邮箱（QQ 邮箱）
+EMAIL_TO = "439472808@qq.com"     # 收件人邮箱，可以和发件人一样
+# 授权码从环境变量/Secrets 中读取
+EMAIL_PASSWORD = os.environ.get("QQ_EMAIL_AUTH_CODE")
 
 
 # ================== 抓取东方财富新闻 ==================
