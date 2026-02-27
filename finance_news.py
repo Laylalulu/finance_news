@@ -16,8 +16,7 @@ EMAIL_TO = os.environ.get("EMAIL_TO")
 # 需要抓取的多个页面
 FINANCE_URLS = [
     "https://finance.eastmoney.com/a/czqyw.html",  # 证券要闻
-    "https://finance.eastmoney.com/a/cgspl.html",  # 股市评论
-    "https://finance.eastmoney.com/",              # 财经首页
+    "https://www.cnstock.com/channel/10233",       # 上海证券报A股
 ]
 
 HEADERS = {
