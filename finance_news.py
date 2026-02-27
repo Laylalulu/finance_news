@@ -13,7 +13,13 @@ EMAIL_TO = os.environ.get("EMAIL_TO")
 # ================== 基本配置 ==================
 
 # 东方财富财经新闻页面
-FINANCE_URL = "https://finance.eastmoney.com/news/"
+# 需要抓取的多个页面
+FINANCE_URLS = [
+    "https://finance.eastmoney.com/a/czqyw.html",  # 证券要闻
+    "https://finance.eastmoney.com/a/cgspl.html",  # 股市评论
+    "https://finance.eastmoney.com/",              # 财经首页
+]
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
