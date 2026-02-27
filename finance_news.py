@@ -45,36 +45,48 @@ EMAIL_PASSWORD = os.environ.get("QQ_EMAIL_AUTH_CODE")
 
 # ================== 抓取东方财富新闻 ==================
 
-def fetch_finance_news():
-    try:
-        response = requests.get(FINANCE_URL, headers=HEADERS, timeout=10)
-        response.raise_for_status()
-        response.encoding = "utf-8"
-        soup = BeautifulSoup(response.text, "html.parser")
+def fetch_finance_news(max_count=30):
+    """
+    从多个东方财富页面抓取新闻，合并到一个列表中。
+    max_count：最多返回多少条，避免数据太多。
+    """
+    all_news = []
 
-        news_list = soup.find_all("div", class_="news-item")
+    for url in FINANCE_URLS:
+        print(f"正在抓取：{url}")
+        try:
+            response = requests.get(url, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            response.encoding = "utf-8"
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        parsed_news = []
-        for news in news_list[:10]:
-            title_tag = news.find("a", class_="title")
-            title = title_tag.get_text(strip=True) if title_tag else "无标题"
-            link = title_tag["href"] if (title_tag and "href" in title_tag.attrs) else ""
-            time_tag = news.find("span", class_="time")
-            publish_time = time_tag.get_text(strip=True) if time_tag else "未知时间"
-            desc_tag = news.find("p", class_="desc")
-            desc = desc_tag.get_text(strip=True) if desc_tag else "无摘要"
+            # 这里先沿用你之前的选择器，如果页面结构不一样，再单独微调
+            news_list = soup.find_all("div", class_="news-item")
 
-            parsed_news.append({
-                "标题": title,
-                "发布时间": publish_time,
-                "摘要": desc,
-                "链接": link
-            })
-        return parsed_news
-    except Exception as e:
-        print(f"抓取失败：{e}")
-        return []
+            for news in news_list:
+                title_tag = news.find("a")
+                title = title_tag.get_text(strip=True) if title_tag else "无标题"
+                link = title_tag["href"] if (title_tag and "href" in title_tag.attrs) else ""
+                time_tag = news.find("span")
+                publish_time = time_tag.get_text(strip=True) if time_tag else "未知时间"
+                desc_tag = news.find("p")
+                desc = desc_tag.get_text(strip=True) if desc_tag else "无摘要"
 
+                all_news.append({
+                    "标题": title,
+                    "发布时间": publish_time,
+                    "摘要": desc,
+                    "链接": link,
+                    "来源页面": url,
+                })
+        except Exception as e:
+            print(f"抓取 {url} 失败：{e}")
+
+    # 可以根据需要做去重或截断
+    if len(all_news) > max_count:
+        all_news = all_news[:max_count]
+
+    return all_news
 
 # ================== 用 GLM 进行要点整理 ==================
 
