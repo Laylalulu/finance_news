@@ -1,5 +1,7 @@
 import requests
+import time
 from bs4 import BeautifulSoup
+import random
 from datetime import datetime, timedelta
 import os
 import smtplib
@@ -19,8 +21,15 @@ FINANCE_URLS = [
     "https://www.cnstock.com/channel/10233",       # 上海证券报A股
 ]
 
+# 强化请求头，模拟国内浏览器
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Referer": "https://www.eastmoney.com/",  # 来源页
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1"
 }
 
 # 在 GitHub Actions 中保存日志的目录（相对当前工作目录）
@@ -34,8 +43,9 @@ GLM_API_URL = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 GLM_MODEL = "glm-4-flash"
 
 # 邮件配置（QQ 邮箱）
+sender_name = "财经资讯助手"   # 发件人名称
 SMTP_SERVER = "smtp.qq.com"
-SMTP_PORT = 465
+SMTP_PORT = 587
 EMAIL_FROM = "439472808@qq.com"   # 发件人邮箱（QQ 邮箱）
 EMAIL_TO = "439472808@qq.com"     # 收件人邮箱，可以和发件人一样
 # 授权码从环境变量/Secrets 中读取
@@ -44,48 +54,59 @@ EMAIL_PASSWORD = os.environ.get("QQ_EMAIL_AUTH_CODE")
 
 # ================== 抓取东方财富新闻 ==================
 
-def fetch_finance_news(max_count=30):
-    """
-    从多个东方财富页面抓取新闻，合并到一个列表中。
-    max_count：最多返回多少条，避免数据太多。
-    """
+def fetch_finance_news():
+    target_urls = [
+        "https://finance.eastmoney.com/a/czqyw.html",
+        "https://finance.eastmoney.com/a/cgspl.html",
+        "https://finance.eastmoney.com/"
+    ]
     all_news = []
-
-    for url in FINANCE_URLS:
+    
+    for url in target_urls:
         print(f"正在抓取：{url}")
         try:
-            response = requests.get(url, headers=HEADERS, timeout=10)
-            response.raise_for_status()
-            response.encoding = "utf-8"
-            soup = BeautifulSoup(response.text, "html.parser")
-
-            # 这里先沿用你之前的选择器，如果页面结构不一样，再单独微调
-            news_list = soup.find_all("div", class_="news-item")
-
-            for news in news_list:
-                title_tag = news.find("a")
-                title = title_tag.get_text(strip=True) if title_tag else "无标题"
-                link = title_tag["href"] if (title_tag and "href" in title_tag.attrs) else ""
-                time_tag = news.find("span")
-                publish_time = time_tag.get_text(strip=True) if time_tag else "未知时间"
-                desc_tag = news.find("p")
-                desc = desc_tag.get_text(strip=True) if desc_tag else "无摘要"
-
-                all_news.append({
-                    "标题": title,
-                    "发布时间": publish_time,
-                    "摘要": desc,
-                    "链接": link,
-                    "来源页面": url,
-                })
+            # 随机延迟（避免高频请求）
+            time.sleep(random.uniform(3, 5))
+            # 发起请求，允许重定向
+            response = requests.get(
+                url, 
+                headers=HEADERS,
+                timeout=15,
+                allow_redirects=True,
+                verify=False  # 跳过SSL验证（境外节点可能证书问题）
+            )
+            # 新增调试日志（关键！看返回内容）
+            print(f"URL: {url} | 状态码: {response.status_code}")
+            print(f"网页内容长度: {len(response.text)} 字符")
+            print(f"前200字符内容: {response.text[:200]}")  # 看返回的是不是有效内容
+            
+            if response.status_code == 200 and len(response.text) > 1000:
+                response.encoding = "utf-8"
+                soup = BeautifulSoup(response.text, "html.parser")
+                # 重新确认东方财富网的新闻标签（避免选择器失效）
+                # 替换成更通用的选择器（东方财富网新闻列表的通用标签）
+                news_items = soup.find_all("div", attrs={"class": lambda x: x and "news-item" in x})
+                print(f"当前URL解析到 {len(news_items)} 条新闻")
+                all_news.extend(news_items)
+            else:
+                print(f"URL: {url} 返回无效内容，跳过")
         except Exception as e:
-            print(f"抓取 {url} 失败：{e}")
-
-    # 可以根据需要做去重或截断
-    if len(all_news) > max_count:
-        all_news = all_news[:max_count]
-
-    return all_news
+            print(f"抓取 {url} 失败：{str(e)}")
+            continue
+    
+    # 去重+提取核心信息
+    unique_news = []
+    seen_titles = set()
+    for item in all_news:
+        # 提取标题（兼容不同标签）
+        title_tag = item.find("a") or item.find("h3")
+        title = title_tag.get_text(strip=True) if title_tag else ""
+        if title and title not in seen_titles:
+            seen_titles.add(title)
+            unique_news.append({"标题": title})
+    
+    print(f"共抓取到 {len(unique_news)} 条新闻（去重后）")
+    return unique_news
 
 # ================== 用 GLM 进行要点整理 ==================
 
